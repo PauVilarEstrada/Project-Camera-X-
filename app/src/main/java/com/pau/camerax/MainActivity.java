@@ -1,78 +1,81 @@
 package com.pau.camerax;
-
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-
-import com.google.android.material.snackbar.Snackbar;
-
 import androidx.appcompat.app.AppCompatActivity;
-
-import android.view.View;
-
-import androidx.core.view.WindowCompat;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-
+import androidx.camera.core.ImageCapture;
+import androidx.camera.video.Recorder;
+import androidx.camera.video.Recording;
+import androidx.camera.video.VideoCapture;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.pau.camerax.databinding.ActivityMainBinding;
 
-import android.view.Menu;
-import android.view.MenuItem;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
+    private ActivityMainBinding viewBinding;
+    private ImageCapture imageCapture;
+    private VideoCapture<Recorder> videoCapture;
+    private Recording recording;
+    private ExecutorService cameraExecutor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        viewBinding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(viewBinding.getRoot());
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        // Request camera permissions
+        if (allPermissionsGranted()) {
+            startCamera();
+        } else {
+            ActivityCompat.requestPermissions(
+                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+        }
 
-        setSupportActionBar(binding.toolbar);
+        // Set up the listeners for take photo and video capture buttons
+        viewBinding.imageCaptureButton.setOnClickListener(v -> takePhoto());
+        viewBinding.videoCaptureButton.setOnClickListener(v -> captureVideo());
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAnchorView(R.id.fab)
-                        .setAction("Action", null).show();
-            }
-        });
+        cameraExecutor = Executors.newSingleThreadExecutor();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+    private void takePhoto() {
+    }
+
+    private void captureVideo() {
+    }
+
+    private void startCamera() {
+    }
+
+    private boolean allPermissionsGranted() {
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(
+                    getBaseContext(), permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
         return true;
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    protected void onDestroy() {
+        super.onDestroy();
+        cameraExecutor.shutdown();
     }
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
-    }
+    private static final String TAG = "CameraXApp";
+    private static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
+    private static final int REQUEST_CODE_PERMISSIONS = 10;
+
+    private final String[] REQUIRED_PERMISSIONS = new String[]{
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) ? Manifest.permission.WRITE_EXTERNAL_STORAGE : ""
+    };
 }
