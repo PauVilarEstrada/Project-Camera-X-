@@ -17,7 +17,10 @@ import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.video.FallbackStrategy;
 import androidx.camera.video.MediaStoreOutputOptions;
+import androidx.camera.video.Quality;
+import androidx.camera.video.QualitySelector;
 import androidx.camera.video.Recorder;
 import androidx.camera.video.Recording;
 import androidx.camera.video.VideoCapture;
@@ -142,20 +145,10 @@ public class MainActivity extends AppCompatActivity implements LumaListener {
                 .build();
 
         recording = videoCapture.getOutput()
-                .prepareRecording(MainActivity.this, mediaStoreOutputOptions)
-                .apply(new Consumer<Recording>() {
-                    @Override
-                    public void accept(Recording recording) throws Exception {
-                        if (PermissionChecker.checkSelfPermission(MainActivity.this,
-                                Manifest.permission.RECORD_AUDIO) ==
-                                PermissionChecker.PERMISSION_GRANTED) {
-                            recording.withAudioEnabled();
-                        }
-                    }
-                })
+                .prepareRecording(this, mediaStoreOutputOptions)
                 .start(ContextCompat.getMainExecutor(this), new Consumer<VideoRecordEvent>() {
                     @Override
-                    public void accept(VideoRecordEvent recordEvent) throws Exception {
+                    public void accept(VideoRecordEvent recordEvent) {
                         if (recordEvent instanceof VideoRecordEvent.Start) {
                             viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
                             viewBinding.videoCaptureButton.setEnabled(true);
@@ -183,29 +176,55 @@ public class MainActivity extends AppCompatActivity implements LumaListener {
     }
 
 
+
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
 
         cameraProviderFuture.addListener(() -> {
             try {
-                // Used to bind the lifecycle of cameras to the lifecycle owner
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-
-                // Preview
                 Preview preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(viewBinding.viewFinder.getSurfaceProvider());
+                CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+                cameraProvider.unbindAll();
 
+                Recorder recorder = new Recorder.Builder()
+                        .setQualitySelector(QualitySelector.from(Quality.HIGHEST,
+                                FallbackStrategy.higherQualityOrLowerThan(Quality.SD)))
+                        .build();
+                videoCapture = VideoCapture.withOutput(recorder);
                 imageCapture = new ImageCapture.Builder().build();
 
                 ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
                         .build();
 
-                imageAnalysis.setAnalyzer(cameraExecutor, new LuminosityAnalyzer(luma -> {
-                    Log.d(TAG, "Average luminosity: " + luma);
-                }));
+                imageAnalysis.setAnalyzer(cameraExecutor, new ImageAnalysis.Analyzer() {
+                    private ByteBuffer toByteBuffer(ImageProxy.PlaneProxy plane) {
+                        ByteBuffer buffer = plane.getBuffer();
+                        buffer.rewind();
+                        byte[] data = new byte[buffer.remaining()];
+                        buffer.get(data);
+                        return buffer;
+                    }
 
-                // Select back camera as a default
-                CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+                    @Override
+                    public void analyze(ImageProxy image) {
+                        ImageProxy.PlaneProxy plane = image.getPlanes()[0];
+                        ByteBuffer buffer = toByteBuffer(plane);
+                        byte[] data = new byte[buffer.remaining()];
+                        buffer.get(data);
+                        int[] pixels = new int[data.length];
+                        for (int i = 0; i < data.length; ++i) {
+                            pixels[i] = data[i] & 0xFF;
+                        }
+                        double luma = calculateAverageLuminosity(pixels);
+
+                        Log.d(TAG, "Average luminosity: " + luma);
+
+                        image.close();
+                    }
+                });
+                cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
 
                 try {
                     // Unbind use cases before rebinding
@@ -222,6 +241,14 @@ public class MainActivity extends AppCompatActivity implements LumaListener {
                 e.printStackTrace();
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private double calculateAverageLuminosity(int[] pixels) {
+        int sum = 0;
+        for (int pixel : pixels) {
+            sum += pixel;
+        }
+        return sum / (double) pixels.length;
     }
 
 
