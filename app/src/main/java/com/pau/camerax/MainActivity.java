@@ -144,36 +144,32 @@ public class MainActivity extends AppCompatActivity implements LumaListener {
                 .setContentValues(contentValues)
                 .build();
 
-        recording = videoCapture.getOutput()
-                .prepareRecording(this, mediaStoreOutputOptions)
-                .start(ContextCompat.getMainExecutor(this), new Consumer<VideoRecordEvent>() {
-                    @Override
-                    public void accept(VideoRecordEvent recordEvent) {
-                        if (recordEvent instanceof VideoRecordEvent.Start) {
-                            viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
-                            viewBinding.videoCaptureButton.setEnabled(true);
-                        } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
-                            VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
-                            if (!finalizeEvent.hasError()) {
-                                String msg = "Video capture succeeded: " +
-                                        finalizeEvent.getOutputResults().getOutputUri();
-                                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT)
-                                        .show();
-                                Log.d(TAG, msg);
-                            } else {
-                                if (recording != null) {
-                                    recording.close();
-                                    recording = null;
-                                }
-                                Log.e(TAG, "Video capture ends with error: " +
-                                        finalizeEvent.getError());
-                            }
-                            viewBinding.videoCaptureButton.setText(getString(R.string.start_capture));
-                            viewBinding.videoCaptureButton.setEnabled(true);
-                        }
+        videoCapture.startRecording(mediaStoreOutputOptions, ContextCompat.getMainExecutor(this), new Consumer<VideoRecordEvent>() {
+            @Override
+            public void accept(VideoRecordEvent recordEvent) {
+                if (recordEvent instanceof VideoRecordEvent.Start) {
+                    viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
+                    viewBinding.videoCaptureButton.setEnabled(true);
+                } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
+                    VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
+                    if (!finalizeEvent.hasError()) {
+                        String msg = "Video capture succeeded: " +
+                                finalizeEvent.getOutputResults().getOutputUri();
+                        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT)
+                                .show();
+                        Log.d(TAG, msg);
+                    } else {
+                        Log.e(TAG, "Video capture ends with error: " +
+                                finalizeEvent.getError());
                     }
-                });
+                    viewBinding.videoCaptureButton.setText(getString(R.string.start_capture));
+                    viewBinding.videoCaptureButton.setEnabled(true);
+                }
+            }
+        });
     }
+
+
 
 
 
