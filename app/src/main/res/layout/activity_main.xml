@@ -5,55 +5,89 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ProvaMain">
+    tools:context=".MainActivity">
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" >
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/captureBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <Button
-            android:id="@+id/image_capture_button"
-            android:layout_width="110dp"
-            android:layout_height="110dp"
-            android:layout_marginEnd="50dp"
-            android:layout_marginBottom="50dp"
-            android:elevation="2dp"
-            android:text="@string/take_photo" />
+        <!-- Botón para hacer foto -->
+        <ImageButton
+            android:id="@+id/rotateCameraButton"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="?android:attr/selectableItemBackground"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:src="@android:drawable/ic_popup_sync" />
+    </androidx.camera.view.PreviewView>
+
+    <!-- Barra de captura (foto y video) -->
+    <LinearLayout
+        android:id="@+id/captureBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Miniatura de la galería -->
+
+        <!-- Espacio en blanco entre la miniatura de la galería y el botón para hacer imagen -->
 
         <ImageView
             android:id="@+id/previewGallery"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_centerHorizontal="true"
-            android:layout_marginStart="155dp"
-            android:layout_marginTop="600dp"
-            android:layout_marginEnd="161dp"
-            android:layout_marginRight="161dp"
-            android:layout_marginBottom="50dp"
+            android:layout_width="65dp"
+            android:layout_height="65dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginRight="16dp" />
+
+        <Space
+            android:id="@+id/spaceBetweenGalleryAndCapture"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- Botón para hacer foto -->
+        <ImageButton
+            android:id="@+id/image_capture_button"
+            android:layout_width="65dp"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="16dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.camera.view.PreviewView>
+            app:layout_constraintStart_toEndOf="@id/spaceBetweenGalleryAndCapture"
+            tools:src="@android:drawable/ic_menu_camera" />
 
-    <Button
-        android:id="@+id/videoCaptureButton"
-        android:layout_width="110dp"
-        android:layout_height="110dp"
-        android:layout_marginBottom="50dp"
-        android:layout_marginStart="50dp"
+        <!-- Espacio en blanco entre el botón para hacer imagen y el botón para hacer video -->
 
-        android:elevation="2dp"
-        android:text="@string/start_capture"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@id/vertical_centerline" />
+        <Space
+            android:id="@+id/spaceBetweenCaptureAndVideo"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/vertical_centerline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent=".50" />
+        <!-- Botón para hacer video -->
+        <ImageButton
+            android:id="@+id/videoCaptureButton"
+            android:layout_width="65dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/image_capture_button"
+            tools:src="@android:drawable/presence_video_busy" />
+    </LinearLayout>
+
+    <!-- Botón para girar la cámara -->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

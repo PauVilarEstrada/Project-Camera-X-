@@ -11,13 +11,16 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.Preview;
@@ -29,6 +32,7 @@ import androidx.camera.video.Recorder;
 import androidx.camera.video.Recording;
 import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
+import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -56,8 +60,11 @@ public class MainActivity extends AppCompatActivity {
     private VideoCapture<Recorder> videoCapture;
     private Recording recording;
     private ExecutorService cameraExecutor;
+    private ImageButton videoBinding;
+    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
+    private ImageAnalysis imageAnalysis;
+    private CameraSelector currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
 
-    private Button videoBinding;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -71,14 +78,24 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
 
-        Button imageBinding = binding.imageCaptureButton;
+        ImageButton imageBinding = binding.imageCaptureButton;
         videoBinding = binding.videoCaptureButton;
 
         imageBinding.setOnClickListener(v -> takePhoto());
         videoBinding.setOnClickListener(v -> captureVideo());
 
         cameraExecutor = Executors.newSingleThreadExecutor();
+        cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        findViewById(R.id.rotateCameraButton).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                rotateCamera();
+            }
+        });
+
+        bindCameraUseCases();
     }
+
 
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
@@ -87,6 +104,32 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return true;
+    }
+    private void bindCameraUseCases() {
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                Preview preview = new Preview.Builder().build();
+                preview.setSurfaceProvider(((PreviewView) findViewById(R.id.viewFinder)).getSurfaceProvider());
+
+                imageCapture = new ImageCapture.Builder().build();
+                imageAnalysis = new ImageAnalysis.Builder().build();
+
+                cameraProvider.unbindAll();
+                cameraProvider.bindToLifecycle(
+                        this, currentCameraSelector, preview, imageAnalysis, imageCapture);
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void rotateCamera() {
+        currentCameraSelector = (currentCameraSelector == CameraSelector.DEFAULT_BACK_CAMERA)
+                ? CameraSelector.DEFAULT_FRONT_CAMERA
+                : CameraSelector.DEFAULT_BACK_CAMERA;
+
+        bindCameraUseCases(); // Re-bind para cambiar la cámara
     }
 
     private void startCamera() {
@@ -192,9 +235,12 @@ public class MainActivity extends AppCompatActivity {
                             Log.d(TAG, msg);
                         } else {
                             Log.e(TAG, "Video capture ends with error: " + finalizeEvent.getError());
+                            if (recording != null) {
+                                recording.close();
+                                recording = null;
+                            }
                         }
-                        recording.close();
-                        recording = null;
+
                         videoBinding.setEnabled(true);
                         loadLastMediaThumbnail();
                     }
