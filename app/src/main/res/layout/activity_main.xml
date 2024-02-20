@@ -7,29 +7,21 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- Barra de captura (foto y video) -->
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@id/captureBar"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0">
 
-        <!-- Botón para hacer foto -->
-        <ImageButton
-            android:id="@+id/rotateCameraButton"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="16dp"
-            android:background="?android:attr/selectableItemBackground"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:src="@android:drawable/ic_popup_sync" />
+
     </androidx.camera.view.PreviewView>
 
-    <!-- Barra de captura (foto y video) -->
     <LinearLayout
         android:id="@+id/captureBar"
         android:layout_width="0dp"

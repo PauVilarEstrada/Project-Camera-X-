@@ -86,14 +86,6 @@ public class MainActivity extends AppCompatActivity {
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        findViewById(R.id.rotateCameraButton).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                rotateCamera();
-            }
-        });
-
-        bindCameraUseCases();
     }
 
 
