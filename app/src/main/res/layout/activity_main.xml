@@ -44,6 +44,18 @@
             android:layout_marginEnd="16dp"
             android:layout_marginRight="16dp" />
 
+        <ImageButton
+            android:id="@+id/rotateCameraButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:src="@drawable/baseline_wifi_protected_setup_24" />
+
+        <ImageButton
+            android:id="@+id/flashControlButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:src="@drawable/baseline_flash_on_24" />
+
         <Space
             android:id="@+id/spaceBetweenGalleryAndCapture"
             android:layout_width="0dp"
@@ -58,17 +70,10 @@
             android:layout_marginBottom="16dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/spaceBetweenGalleryAndCapture"
-            tools:src="@android:drawable/ic_menu_camera" />
+            tools:src="@drawable/baseline_photo_camera_24" />
 
         <!-- Espacio en blanco entre el botón para hacer imagen y el botón para hacer video -->
 
-        <Space
-            android:id="@+id/spaceBetweenCaptureAndVideo"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1"/>
-
-        <!-- Botón para hacer video -->
         <ImageButton
             android:id="@+id/videoCaptureButton"
             android:layout_width="65dp"
@@ -77,8 +82,18 @@
             android:layout_marginBottom="16dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/image_capture_button"
-            tools:src="@android:drawable/presence_video_busy" />
+            tools:src="@drawable/baseline_video_camera_back_24" />
+
+        <Space
+            android:id="@+id/spaceBetweenCaptureAndVideo"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- Botón para hacer video -->
     </LinearLayout>
+
+    <!-- Botón para controlar el flash -->
 
     <!-- Botón para girar la cámara -->
 

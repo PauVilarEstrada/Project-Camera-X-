@@ -12,13 +12,13 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
@@ -65,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageAnalysis imageAnalysis;
     private CameraSelector currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
 
+    private Camera camera;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -83,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
 
         imageBinding.setOnClickListener(v -> takePhoto());
         videoBinding.setOnClickListener(v -> captureVideo());
+        ImageButton rotateCameraButton = findViewById(R.id.rotateCameraButton);
+        rotateCameraButton.setOnClickListener(v -> onRotateCameraClick(v));
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
@@ -96,6 +100,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return true;
+    }
+    public void onRotateCameraClick(View view) {
+        switchCamera();
     }
     private void bindCameraUseCases() {
         cameraProviderFuture.addListener(() -> {
@@ -116,13 +123,23 @@ public class MainActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private void rotateCamera() {
-        currentCameraSelector = (currentCameraSelector == CameraSelector.DEFAULT_BACK_CAMERA)
-                ? CameraSelector.DEFAULT_FRONT_CAMERA
-                : CameraSelector.DEFAULT_BACK_CAMERA;
+    private void switchCamera() {
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+                .requireLensFacing(camera.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_FRONT
+                        ? CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
+                .build();
+        try {
+            ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
 
-        bindCameraUseCases(); // Re-bind para cambiar la cámara
+            cameraProvider.unbindAll();
+            Preview preview = new Preview.Builder().build();
+            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview , imageCapture, videoCapture);
+        } catch (ExecutionException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
+
 
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
@@ -145,6 +162,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }, ContextCompat.getMainExecutor(this));
     }
+
+    private void toggleFlash() {
+        if (camera.getCameraInfo().hasFlashUnit()) {
+            imageCapture.setFlashMode(imageCapture.getFlashMode() == ImageCapture.FLASH_MODE_ON
+                    ? ImageCapture.FLASH_MODE_OFF : ImageCapture.FLASH_MODE_ON);
+        }
+    }
+
 
     private void takePhoto() {
         ImageCapture imageCapture = this.imageCapture;
