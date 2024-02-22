@@ -67,7 +67,6 @@ public class MainActivity extends AppCompatActivity {
 
     private Camera camera;
 
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -87,11 +86,12 @@ public class MainActivity extends AppCompatActivity {
         videoBinding.setOnClickListener(v -> captureVideo());
         ImageButton rotateCameraButton = findViewById(R.id.rotateCameraButton);
         rotateCameraButton.setOnClickListener(v -> onRotateCameraClick(v));
+        ImageButton flashButton = binding.flashControlButton;
+        flashButton.setOnClickListener(this::onFlashClick);
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
     }
-
 
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
@@ -101,9 +101,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
-    public void onRotateCameraClick(View view) {
-        switchCamera();
-    }
+
     private void bindCameraUseCases() {
         cameraProviderFuture.addListener(() -> {
             try {
@@ -123,23 +121,27 @@ public class MainActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
+    @SuppressLint("RestrictedApi")
     private void switchCamera() {
-        CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(camera.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_FRONT
-                        ? CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
-                .build();
+        CameraSelector newCameraSelector;
+        if (currentCameraSelector.getLensFacing() == CameraSelector.LENS_FACING_FRONT) {
+            newCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+        } else {
+            newCameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
+        }
+
         try {
             ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
 
             cameraProvider.unbindAll();
             Preview preview = new Preview.Builder().build();
-            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview , imageCapture, videoCapture);
+            preview.setSurfaceProvider(binding.viewFinder.getSurfaceProvider()); // Asegúrate de configurar el SurfaceProvider
+            camera = cameraProvider.bindToLifecycle(this, newCameraSelector, preview, imageCapture, videoCapture);
+            currentCameraSelector = newCameraSelector; // Actualizar la selección de la cámara actual
         } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
-
     }
-
 
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
@@ -156,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                 imageCapture = new ImageCapture.Builder().build();
                 CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
                 cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, videoCapture);
+                camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, videoCapture);
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "Use case binding failed", e);
             }
@@ -164,12 +166,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void toggleFlash() {
-        if (camera.getCameraInfo().hasFlashUnit()) {
-            imageCapture.setFlashMode(imageCapture.getFlashMode() == ImageCapture.FLASH_MODE_ON
-                    ? ImageCapture.FLASH_MODE_OFF : ImageCapture.FLASH_MODE_ON);
+        if (camera != null && camera.getCameraInfo().hasFlashUnit()) {
+            int newFlashMode = imageCapture.getFlashMode() == ImageCapture.FLASH_MODE_ON
+                    ? ImageCapture.FLASH_MODE_OFF : ImageCapture.FLASH_MODE_ON;
+
+            imageCapture.setFlashMode(newFlashMode);
+
+            // Mostrar Toast indicando el estado actual del flash
+            if (newFlashMode == ImageCapture.FLASH_MODE_ON) {
+                Toast.makeText(this, "Flash activado", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Flash desactivado", Toast.LENGTH_SHORT).show();
+            }
         }
     }
-
 
     private void takePhoto() {
         ImageCapture imageCapture = this.imageCapture;
@@ -184,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
         imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                Toast.makeText(MainActivity.this, "Foto realizada", Toast.LENGTH_SHORT).show();
                 String msg = "Photo capture succeeded: " + outputFileResults.getSavedUri();
                 Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
                 Log.d(TAG, msg);
@@ -226,7 +237,6 @@ public class MainActivity extends AppCompatActivity {
             recording = null;
             return;
         }
-
         String name = new SimpleDateFormat(FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis());
         ContentValues contentValues = createVideoContentValues(name);
@@ -243,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
                 .withAudioEnabled()
                 .start(ContextCompat.getMainExecutor(MainActivity.this), recordEvent -> {
                     if (recordEvent instanceof VideoRecordEvent.Start) {
+                        Toast.makeText(MainActivity.this, "Grabación iniciada", Toast.LENGTH_SHORT).show();
                         videoBinding.setEnabled(true);
                     } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
                         VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
@@ -257,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
                                 recording = null;
                             }
                         }
-
+                        Toast.makeText(MainActivity.this, "Grabación finalizada", Toast.LENGTH_SHORT).show();
                         videoBinding.setEnabled(true);
                         loadLastMediaThumbnail();
                     }
@@ -310,5 +321,14 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
         }
+    }
+
+    // Nuevo método para manejar el clic en el botón de rotar la cámara
+    private void onRotateCameraClick(View view) {
+        switchCamera();
+    }
+
+    private void onFlashClick(View view) {
+        toggleFlash();
     }
 }
