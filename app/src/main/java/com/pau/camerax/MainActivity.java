@@ -47,27 +47,26 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
-
     private static final String[] REQUIRED_PERMISSIONS = {
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO
     };
-
     private static final int REQUEST_CODE_PERMISSIONS = 10;
     private static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
     private static final String TAG = "CameraApp";
+    private static final String KEY_CAMERA_SELECTOR = "camera_selector";
+    private static final String KEY_CAMERA_LENS_FACING = "camera_lens_facing";
 
     private ActivityMainBinding binding;
+    private ImageButton videoBinding;
+
     private ImageCapture imageCapture;
     private VideoCapture<Recorder> videoCapture;
     private Recording recording;
     private ExecutorService cameraExecutor;
-    private ImageButton videoBinding;
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ImageAnalysis imageAnalysis;
     private CameraSelector currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-    private static final String KEY_CAMERA_SELECTOR = "camera_selector";
-    private static final String KEY_CAMERA_LENS_FACING = "camera_lens_facing";
     private Camera camera;
 
     @Override
@@ -75,49 +74,30 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
         if (allPermissionsGranted()) {
             startCamera();
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
-
         ImageButton imageBinding = binding.imageCaptureButton;
         videoBinding = binding.videoCaptureButton;
-
         imageBinding.setOnClickListener(v -> takePhoto());
         videoBinding.setOnClickListener(v -> captureVideo());
         ImageButton rotateCameraButton = findViewById(R.id.rotateCameraButton);
-        rotateCameraButton.setOnClickListener(v -> onRotateCameraClick(v));
+        rotateCameraButton.setOnClickListener(this::onRotateCameraClick);
         ImageButton flashButton = binding.flashControlButton;
         flashButton.setOnClickListener(this::onFlashClick);
         ImageView previewGallery = findViewById(R.id.previewGallery);
         previewGallery.setOnClickListener(view -> openGooglePhotos());
-
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
 
-        // Recuperar el estado de la cámara si existe
         if (savedInstanceState != null) {
             int lensFacing = savedInstanceState.getInt(KEY_CAMERA_LENS_FACING);
             currentCameraSelector = new CameraSelector.Builder().requireLensFacing(lensFacing).build();
-        } else {
-            // Si no hay estado guardado, utiliza la cámara predeterminada
-            currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
         }
-
-        // Restaurar el estado de la cámara
         bindCameraUseCases();
     }
-
-    @SuppressLint("RestrictedApi")
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        // Guardar el estado actual de la cámara
-        outState.putInt(KEY_CAMERA_LENS_FACING, currentCameraSelector.getLensFacing());
-    }
-
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -126,26 +106,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
-
-    private void bindCameraUseCases() {
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(((PreviewView) findViewById(R.id.viewFinder)).getSurfaceProvider());
-
-                imageCapture = new ImageCapture.Builder().build();
-                imageAnalysis = new ImageAnalysis.Builder().build();
-
-                cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(
-                        this, currentCameraSelector, preview, imageAnalysis, imageCapture);
-            } catch (ExecutionException | InterruptedException e) {
-                e.printStackTrace();
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
     @SuppressLint("RestrictedApi")
     private void switchCamera() {
         CameraSelector newCameraSelector;
@@ -154,10 +114,8 @@ public class MainActivity extends AppCompatActivity {
         } else {
             newCameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
         }
-
         try {
             ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-
             cameraProvider.unbindAll();
             Preview preview = new Preview.Builder().build();
             preview.setSurfaceProvider(binding.viewFinder.getSurfaceProvider()); // Asegúrate de configurar el SurfaceProvider
@@ -167,10 +125,8 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
@@ -189,33 +145,30 @@ public class MainActivity extends AppCompatActivity {
             }
         }, ContextCompat.getMainExecutor(this));
     }
+    private void bindCameraUseCases() {
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                Preview preview = new Preview.Builder().build();
+                preview.setSurfaceProvider(((PreviewView) findViewById(R.id.viewFinder)).getSurfaceProvider());
 
-    private void toggleFlash() {
-        if (camera != null && camera.getCameraInfo().hasFlashUnit()) {
-            int newFlashMode = imageCapture.getFlashMode() == ImageCapture.FLASH_MODE_ON
-                    ? ImageCapture.FLASH_MODE_OFF : ImageCapture.FLASH_MODE_ON;
-
-            imageCapture.setFlashMode(newFlashMode);
-
-            // Mostrar Toast indicando el estado actual del flash
-            if (newFlashMode == ImageCapture.FLASH_MODE_ON) {
-                Toast.makeText(this, "Flash activado", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Flash desactivado", Toast.LENGTH_SHORT).show();
+                imageCapture = new ImageCapture.Builder().build();
+                imageAnalysis = new ImageAnalysis.Builder().build();
+                cameraProvider.unbindAll();
+                cameraProvider.bindToLifecycle(
+                        this, currentCameraSelector, preview, imageAnalysis, imageCapture);
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
             }
-        }
+        }, ContextCompat.getMainExecutor(this));
     }
-
     private void takePhoto() {
         ImageCapture imageCapture = this.imageCapture;
         if (imageCapture == null) return;
-
         String name = new SimpleDateFormat(FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis());
         ContentValues contentValues = createImageContentValues(name);
-
         ImageCapture.OutputFileOptions outputOptions = createImageOutputOptions(contentValues);
-
         imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
@@ -223,16 +176,14 @@ public class MainActivity extends AppCompatActivity {
                 String msg = "Photo capture succeeded: " + outputFileResults.getSavedUri();
                 Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
                 Log.d(TAG, msg);
-                loadLastMediaThumbnail();
+                loadThumbnail();
             }
-
             @Override
             public void onError(@NonNull ImageCaptureException exc) {
                 Log.e(TAG, "Photo capture failed: " + exc.getMessage(), exc);
             }
         });
     }
-
     private ContentValues createImageContentValues(String name) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
@@ -240,22 +191,18 @@ public class MainActivity extends AppCompatActivity {
         contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/CameraX-Image");
         return contentValues;
     }
-
     private ImageCapture.OutputFileOptions createImageOutputOptions(ContentValues contentValues) {
         return new ImageCapture.OutputFileOptions.Builder(getContentResolver(),
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
                 .build();
     }
-
     private void captureVideo() {
         VideoCapture<Recorder> videoCapture = this.videoCapture;
         if (videoCapture == null) {
             Log.e(TAG, "VideoCapture is null");
             return;
         }
-
         videoBinding.setEnabled(false);
-
         Recording curRecording = recording;
         if (curRecording != null) {
             curRecording.stop();
@@ -265,11 +212,9 @@ public class MainActivity extends AppCompatActivity {
         String name = new SimpleDateFormat(FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis());
         ContentValues contentValues = createVideoContentValues(name);
-
         MediaStoreOutputOptions mediaStoreOutputOptions = new MediaStoreOutputOptions.Builder(getContentResolver(), MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
                 .setContentValues(contentValues)
                 .build();
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
@@ -295,11 +240,10 @@ public class MainActivity extends AppCompatActivity {
                         }
                         Toast.makeText(MainActivity.this, "Grabación finalizada", Toast.LENGTH_SHORT).show();
                         videoBinding.setEnabled(true);
-                        loadLastMediaThumbnail();
+                        loadThumbnail();
                     }
                 });
     }
-
     private ContentValues createVideoContentValues(String name) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
@@ -307,15 +251,27 @@ public class MainActivity extends AppCompatActivity {
         contentValues.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/CameraX-Video");
         return contentValues;
     }
+    private void toggleFlash() {
+        if (camera != null && camera.getCameraInfo().hasFlashUnit()) {
+            int newFlashMode = imageCapture.getFlashMode() == ImageCapture.FLASH_MODE_ON
+                    ? ImageCapture.FLASH_MODE_OFF : ImageCapture.FLASH_MODE_ON;
 
-    private void loadLastMediaThumbnail() {
+            imageCapture.setFlashMode(newFlashMode);
+            if (newFlashMode == ImageCapture.FLASH_MODE_ON) {
+                Toast.makeText(this, "Flash activado", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Flash desactivado", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void loadThumbnail() {
         Uri mediaUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         String[] projection = {MediaStore.Images.Media._ID};
         String sortOrder = MediaStore.Images.Media.DATE_TAKEN + " DESC";
 
         ContentResolver contentResolver = getContentResolver();
         Cursor cursor = contentResolver.query(mediaUri, projection, null, null, sortOrder);
-
         if (cursor != null && cursor.moveToFirst()) {
             @SuppressLint("Range") long mediaId = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
             Uri contentUri = Uri.withAppendedPath(mediaUri, String.valueOf(mediaId));
@@ -323,18 +279,16 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.e(TAG, "No se encontraron imágenes o videos.");
         }
-
         if (cursor != null) {
             cursor.close();
         }
     }
-
+    @SuppressLint("RestrictedApi")
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        cameraExecutor.shutdown();
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(KEY_CAMERA_LENS_FACING, currentCameraSelector.getLensFacing());
     }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -347,8 +301,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-    // Nuevo método para manejar el clic en el botón de rotar la cámara
+    private void openGooglePhotos() {
+        Uri uri = Uri.parse("content://media/internal/images/media");
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        startActivity(intent);
+    }
     private void onRotateCameraClick(View view) {
         switchCamera();
     }
@@ -356,10 +313,9 @@ public class MainActivity extends AppCompatActivity {
     private void onFlashClick(View view) {
         toggleFlash();
     }
-
-    private void openGooglePhotos() {
-        Uri uri = Uri.parse("content://media/internal/images/media");
-        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-        startActivity(intent);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        cameraExecutor.shutdown();
     }
 }
