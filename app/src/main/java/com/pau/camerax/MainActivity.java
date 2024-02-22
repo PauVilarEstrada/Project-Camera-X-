@@ -45,10 +45,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String[] REQUIRED_PERMISSIONS = {
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
-    };
     private static final int REQUEST_CODE_PERMISSIONS = 10;
     private static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
     private static final String TAG = "CameraApp";
@@ -66,6 +62,10 @@ public class MainActivity extends AppCompatActivity {
     private ImageAnalysis imageAnalysis;
     private CameraSelector currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
     private Camera camera;
+    private static final String[] REQUIRED_PERMISSIONS = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
