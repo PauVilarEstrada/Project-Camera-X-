@@ -94,9 +94,10 @@ public class MainActivity extends AppCompatActivity {
         ImageView previewGallery = findViewById(R.id.previewGallery);
         previewGallery.setOnClickListener(view -> openGooglePhotos());
 
-
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+
+        // Recuperar el estado de la cámara si existe
         if (savedInstanceState != null) {
             int lensFacing = savedInstanceState.getInt(KEY_CAMERA_LENS_FACING);
             currentCameraSelector = new CameraSelector.Builder().requireLensFacing(lensFacing).build();
@@ -104,14 +105,17 @@ public class MainActivity extends AppCompatActivity {
             // Si no hay estado guardado, utiliza la cámara predeterminada
             currentCameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
         }
+
+        // Restaurar el estado de la cámara
+        bindCameraUseCases();
     }
+
     @SuppressLint("RestrictedApi")
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         // Guardar el estado actual de la cámara
         outState.putInt(KEY_CAMERA_LENS_FACING, currentCameraSelector.getLensFacing());
-
     }
 
     private boolean allPermissionsGranted() {
@@ -352,6 +356,7 @@ public class MainActivity extends AppCompatActivity {
     private void onFlashClick(View view) {
         toggleFlash();
     }
+
     private void openGooglePhotos() {
         Uri uri = Uri.parse("content://media/internal/images/media");
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
