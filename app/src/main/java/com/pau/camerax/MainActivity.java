@@ -48,9 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_PERMISSIONS = 10;
     private static final String FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS";
     private static final String TAG = "CameraApp";
-    private static final String KEY_CAMERA_SELECTOR = "camera_selector";
     private static final String KEY_CAMERA_LENS_FACING = "camera_lens_facing";
-
     private ActivityMainBinding binding;
     private ImageButton videoBinding;
 
