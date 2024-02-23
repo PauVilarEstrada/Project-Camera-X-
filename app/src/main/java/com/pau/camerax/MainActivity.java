@@ -114,9 +114,9 @@ public class MainActivity extends AppCompatActivity {
             ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
             cameraProvider.unbindAll();
             Preview preview = new Preview.Builder().build();
-            preview.setSurfaceProvider(binding.viewFinder.getSurfaceProvider()); // Asegúrate de configurar el SurfaceProvider
+            preview.setSurfaceProvider(binding.viewFinder.getSurfaceProvider());
             camera = cameraProvider.bindToLifecycle(this, newCameraSelector, preview, imageCapture, videoCapture);
-            currentCameraSelector = newCameraSelector; // Actualizar la selección de la cámara actual
+            currentCameraSelector = newCameraSelector;
         } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
